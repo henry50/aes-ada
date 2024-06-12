@@ -15,7 +15,6 @@ begin
     return St;
 end Block_To_State;
 
--- untested
 function Pad_Input(Input: Input_Buffer) return Input_Buffer is
     Nearest_16: Natural := ((Input'Length / 16) + 1) * 16;
     Result: Input_Buffer(0..Nearest_16-1);
@@ -26,18 +25,20 @@ begin
     return Result;
 end Pad_Input;
 
--- untested
-function Input_To_States(Input: Input_Buffer) return States is
-    Num_States: Natural := Input'Length / 16;
-    Return_States: States(0..Num_States);
-    Padded: Input_Buffer := Pad_Input(Input);
+function Input_To_States(Input: Input_Buffer; Op: Operation) return States is
+    Padded: Input_Buffer := (case Op is
+        when Encrypt => Pad_Input(Input),
+        when Decrypt => Input
+    );
+    Num_States: Natural := Padded'Length / 16;
+    Result: States(0..Num_States-1);
 begin
-    for I in Return_States'Range loop
-        Return_States(I) := Block_To_State(
-            Padded((16 * I)..((16*I)+15))
+    for I in Result'Range loop
+        Result(I) := Block_To_State(
+            Padded((16 * I)..(16*I+15))
         );
     end loop;
-    return Return_States;
+    return Result;
 end Input_To_States;
 
 function State_To_Block(St: State) return Block_Bytes is
@@ -51,34 +52,41 @@ begin
     return Result;
 end State_To_Block;
 
--- untested
-function States_To_Output(Output: States; Remove_Padding: Boolean) return Output_Buffer is
+function States_To_Output(Output: States; Op: Operation) return Output_Buffer is
     Padding_Error: exception;
-    Result_Buffer: Output_Buffer(0..(16 * Output'Length)-1);
+    Result_Len: Natural := 16 * Output'Length - 1;
+    Result: Output_Buffer(0..Result_Len);
 begin
+    -- Convert states to byte arrays and concatenate
     for I in Output'Range loop
-        Result_Buffer((16*I)..((16*I) + 15)) := State_To_Block(Output(I));
+        Result((16*I)..(16*I+15)) := State_To_Block(Output(I));
     end loop;
-    if Remove_Padding then
+    if Op = Decrypt then
     declare
-        Padding: Natural := Natural(Result_Buffer'Last);
-        Expected_Padding: Output_Buffer(0..Padding-1) := (others => Byte(Padding));
-        Padding_Start: Natural := (16 * Output'Length) - 1 - Padding;
+        Last_Block: Bytes := State_To_Block(Output(Output'Last));
+        -- The last byte of the last block should be the padding and its length
+        Padding: Byte := Last_Block(Last_Block'Last);
     begin
-        if Result_Buffer(Padding_Start..Result_Buffer'Length-1)
-              /= Expected_Padding or Padding /= Expected_Padding'Length then
+        -- If the padding isn't between 1 and 16 it isn't valid
+        if Padding < 1 or Padding > 16 then
             raise Padding_Error;
-        else
-            declare
-                Unpadded_Result: Output_Buffer(0..Result_Buffer'Length-1-Padding)
-                    := Result_Buffer(0..Padding_Start-1);
-            begin
-                return Unpadded_Result;
-            end;
         end if;
+    declare
+        -- The expected padding is the padding repeated by itself
+        Expected_Padding: Bytes(0..Natural(Padding)-1) := (others => Padding);
+        -- The expected padding starts Padding bytes from the end
+        Expected_Padding_Start: Natural := 16 - Natural(Padding);
+        -- Copy the result up to the start of padding
+        Unpadded_Result: Output_Buffer := Result(0..Result_Len-Natural(Padding));
+    begin
+        if Last_Block(Expected_Padding_Start..Last_Block'Last) /= Expected_Padding then
+            raise Padding_Error;
+        end if;
+        return Unpadded_Result;
+    end;
     end;
     else
-        return Result_Buffer;
+        return Result;
     end if;
 end States_To_Output;
 

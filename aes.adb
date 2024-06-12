@@ -47,35 +47,37 @@ begin
     return AES_Block(Input, K, Op);
 end AES_Block_256;
 
-function Generic_CBC(Input: Input_Buffer; K: Key; IV: Init_Vector; Op: Operation) return Output_Buffer is
-    St: States := Input_To_States(Input);
+function AES_CBC(Input: Input_Buffer; K: Key; IV: Init_Vector; Op: Operation) return Output_Buffer is
+    St: States := Input_To_States(Input, Op);
     Output: States(0..St'Length-1);
     Prev: State := Block_To_State(Input_Buffer(IV));
-    Remove_Padding: Boolean := (case Op is when Encrypt => false, when Decrypt => true);
-begin
+    begin
     for I in St'Range loop
         Output(I) := (case Op is
             when Encrypt => AES.Cipher.Cipher(St(I) xor Prev, K),
-            when Decrypt => AES.Inv_Cipher.Inv_Cipher(St(I) xor Prev, K)
+            when Decrypt => AES.Inv_Cipher.Inv_Cipher(St(I), K) xor Prev
         );
-        Prev := Output(I);
+        Prev := (case Op is
+            when Encrypt => Output(I),
+            when Decrypt => St(I)
+        );
     end loop;
-    return States_To_Output(Output, Remove_Padding);
-end Generic_CBC;
+    return States_To_Output(Output, Op);
+end AES_CBC;
 
 function AES_CBC_128(Input: Input_Buffer; K: AES_128_Key; IV: Init_Vector; Op: Operation) return Output_Buffer is
 begin
-    return Generic_CBC(Input, K, IV, Op);
+    return AES_CBC(Input, K, IV, Op);
 end AES_CBC_128;
 
 function AES_CBC_192(Input: Input_Buffer; K: AES_192_Key; IV: Init_Vector; Op: Operation) return Output_Buffer is
 begin
-    return Generic_CBC(Input, K, IV, Op);
+    return AES_CBC(Input, K, IV, Op);
 end AES_CBC_192;
 
 function AES_CBC_256(Input: Input_Buffer; K: AES_256_Key; IV: Init_Vector; Op: Operation) return Output_Buffer is
 begin
-    return Generic_CBC(Input, K, IV, Op);
+    return AES_CBC(Input, K, IV, Op);
 end AES_CBC_256;
 
 end AES;

@@ -1,5 +1,3 @@
-with Ada.Text_IO; use Ada.Text_IO;
-
 package body AES.Util is
 
 function Hex_To_Bytes(Hex: String) return Bytes is
