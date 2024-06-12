@@ -62,8 +62,7 @@ procedure Example is
     IV: Init_Vector := Hex_To_Bytes("00112233445566778899AABBCCDDEEFF");
     Result: Output_Buffer := AES_CBC_192(Input, Key, IV, Encrypt);
 begin
-    -- 7162fa4e6f8b0aacaa28051a3c6983540e6070509aa148d8
-    -- c733f824649f5183c12fd81c5f3652df2be23f3985c85f53
+    -- 7162fa4e6f8b0aacaa28051a3c6983540e6070509aa148d8c733f824649f5183c12fd81c5f3652df2be23f3985c85f53
     Put_Line(Bytes_To_Hex(Result));
 end Example;
 ```
