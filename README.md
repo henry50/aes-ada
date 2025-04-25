@@ -1,5 +1,8 @@
 # aes-ada
 
+> [!NOTE]
+> This repository has been moved to https://github.com/henry50/aes/tree/main/aes-ada
+
 The Advanced Encryption Standard implemented in Ada.
 
 **This implementation may not be cryptographically secure.**
